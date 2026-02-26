@@ -132,6 +132,20 @@ const LoginPage = ({ onLogin }: { onLogin: (user: User) => void }) => {
               {loading ? 'Memproses...' : 'Masuk Sekarang'}
             </button>
           </form>
+
+          <div className="mt-8 pt-6 border-t border-slate-100">
+            <p className="text-xs text-center text-slate-400 font-medium uppercase tracking-widest">Demo Access</p>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="p-3 bg-slate-50 rounded-xl text-center">
+                <p className="text-[10px] font-bold text-slate-400 uppercase">Admin</p>
+                <p className="text-xs font-bold text-slate-600">admin / admin123</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl text-center">
+                <p className="text-[10px] font-bold text-slate-400 uppercase">Warga</p>
+                <p className="text-xs font-bold text-slate-600">warga / warga123</p>
+              </div>
+            </div>
+          </div>
         </div>
       </motion.div>
     </div>
