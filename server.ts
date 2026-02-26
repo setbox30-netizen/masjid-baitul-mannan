@@ -54,7 +54,7 @@ db.exec(`
   INSERT OR IGNORE INTO users (username, password, role) VALUES ('warga', 'warga123', 'warga');
 
   -- Default Settings
-  INSERT OR IGNORE INTO settings (key, value) VALUES ('mosque_name', 'Nurul Iman');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('mosque_name', 'Baitul Mannan');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('mosque_address', 'Jl. Raya No. 123, Kota Bandung');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('mosque_phone', '0812-3456-7890');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('chairman_name', 'H. Ahmad Subarjo');
