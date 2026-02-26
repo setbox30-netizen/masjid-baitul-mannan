@@ -310,7 +310,7 @@ const Dashboard = ({ stats, finances }: { stats: DashboardStats | null, finances
 
 const FinancePage = ({ data, onAdd, onEdit, onDelete, onRefresh, settings, role }: { data: FinanceRecord[], onAdd: () => void, onEdit: (item: FinanceRecord) => void, onDelete: (id: number) => void, onRefresh: () => void, settings: Record<string, string>, role: string }) => {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
-  const mosqueName = settings.mosque_name || 'Nurul Iman';
+  const mosqueName = settings.mosque_name || 'Baitul Mannan';
 
   // Get unique months from data for filter options
   const availableMonths = Array.from(new Set(data.map(item => item.date.substring(0, 7)))).sort().reverse();
@@ -875,7 +875,7 @@ const SettingsPage = ({ settings, onSave, role }: { settings: Record<string, str
               value={formData.mosque_name || ''}
               onChange={(e) => setFormData({...formData, mosque_name: e.target.value})}
               className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-50"
-              placeholder="Contoh: Masjid Nurul Iman"
+              placeholder="Contoh: Masjid Baitul Mannan"
             />
           </div>
           <div>
@@ -1076,7 +1076,7 @@ export default function App() {
                 )}
               </div>
               <div>
-                <h1 className="font-bold text-lg leading-tight truncate max-w-[140px]">{settings.mosque_name || 'Nurul Iman'}</h1>
+                <h1 className="font-bold text-lg leading-tight truncate max-w-[140px]">{settings.mosque_name || 'Baitul Mannan'}</h1>
                 <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Management System</p>
               </div>
             </div>
@@ -1124,7 +1124,7 @@ export default function App() {
               <Menu size={20} />
             </button>
             <div className="h-6 w-[1px] bg-slate-100 mx-1 sm:mx-2 hidden md:block"></div>
-            <h2 className="font-bold text-slate-400 hidden md:block truncate max-w-[200px]">{settings.mosque_name || 'Nurul Iman'}</h2>
+            <h2 className="font-bold text-slate-400 hidden md:block truncate max-w-[200px]">{settings.mosque_name || 'Baitul Mannan'}</h2>
           </div>
           
           <div className="relative max-w-md w-full hidden lg:block mx-8">
