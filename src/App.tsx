@@ -69,7 +69,8 @@ const LoginPage = ({ onLogin }: { onLogin: (user: User) => void }) => {
         setError(data.error || 'Login gagal');
       }
     } catch (err) {
-      setError('Terjadi kesalahan koneksi');
+      console.error('Login connection error:', err);
+      setError('Terjadi kesalahan koneksi. Pastikan server sudah berjalan sepenuhnya.');
     } finally {
       setLoading(false);
     }
