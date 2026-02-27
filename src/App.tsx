@@ -22,7 +22,9 @@ import {
   AlertTriangle,
   LogOut,
   Lock,
-  User as UserIcon
+  User as UserIcon,
+  Clock,
+  MapPin
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -39,7 +41,7 @@ import {
 } from 'recharts';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import { DashboardStats, FinanceRecord, InventoryItem, MosqueEvent, User } from './types';
+import { DashboardStats, FinanceRecord, InventoryItem, MosqueEvent, User, JamaahRecord } from './types';
 
 // --- Components ---
 
@@ -249,10 +251,10 @@ const Dashboard = ({ stats, finances }: { stats: DashboardStats | null, finances
           color="bg-blue-500" 
         />
         <StatCard 
-          label="Total Pengeluaran" 
-          value={stats?.totalExpense || 0} 
-          icon={TrendingDown} 
-          color="bg-rose-500" 
+          label="Data Jamaah" 
+          value={stats?.jamaahCount || 0} 
+          icon={Users} 
+          color="bg-indigo-500" 
         />
         <StatCard 
           label="Inventaris" 
@@ -777,12 +779,521 @@ const TransactionModal = ({ isOpen, onClose, onSuccess, editItem }: { isOpen: bo
   );
 };
 
-const InventoryPage = ({ data, onAdd, role }: { data: InventoryItem[], onAdd: () => void, role: string }) => (
+const InventoryModal = ({ isOpen, onClose, onSuccess, editItem }: { isOpen: boolean, onClose: () => void, onSuccess: () => void, editItem: InventoryItem | null }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    category: 'Elektronik',
+    quantity: '1',
+    condition: 'good',
+    purchase_date: format(new Date(), 'yyyy-MM-dd')
+  });
+
+  useEffect(() => {
+    if (editItem) {
+      setFormData({
+        name: editItem.name,
+        category: editItem.category,
+        quantity: editItem.quantity.toString(),
+        condition: editItem.condition,
+        purchase_date: editItem.purchase_date
+      });
+    } else {
+      setFormData({
+        name: '',
+        category: 'Elektronik',
+        quantity: '1',
+        condition: 'good',
+        purchase_date: format(new Date(), 'yyyy-MM-dd')
+      });
+    }
+  }, [editItem, isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const url = editItem ? `/api/inventory/${editItem.id}` : '/api/inventory';
+    const method = editItem ? 'PUT' : 'POST';
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          ...formData, 
+          quantity: Number(formData.quantity) 
+        })
+      });
+      if (res.ok) {
+        onSuccess();
+        onClose();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl my-auto"
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold">{editItem ? 'Edit Barang' : 'Tambah Barang'}</h3>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full"><X size={20} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nama Barang</label>
+            <input 
+              type="text" 
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              className="w-full p-2.5 sm:p-3 bg-slate-50 border-none rounded-xl outline-none text-sm"
+              placeholder="Contoh: Sound System"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Kategori</label>
+              <select 
+                value={formData.category}
+                onChange={(e) => setFormData({...formData, category: e.target.value})}
+                className="w-full p-2.5 sm:p-3 bg-slate-50 border-none rounded-xl outline-none text-sm"
+              >
+                <option>Elektronik</option>
+                <option>Perlengkapan</option>
+                <option>Meubel</option>
+                <option>Lainnya</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Jumlah</label>
+              <input 
+                type="number" 
+                required
+                value={formData.quantity}
+                onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                className="w-full p-2.5 sm:p-3 bg-slate-50 border-none rounded-xl outline-none text-sm"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Kondisi</label>
+            <div className="grid grid-cols-3 gap-2">
+              {['good', 'fair', 'poor'].map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setFormData({...formData, condition: c as any})}
+                  className={`py-2 rounded-lg text-[10px] font-bold uppercase transition-all ${formData.condition === c ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-slate-400'}`}
+                >
+                  {c === 'good' ? 'Baik' : c === 'fair' ? 'Cukup' : 'Rusak'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Tanggal Pembelian</label>
+            <input 
+              type="date" 
+              required
+              value={formData.purchase_date}
+              onChange={(e) => setFormData({...formData, purchase_date: e.target.value})}
+              className="w-full p-2.5 sm:p-3 bg-slate-50 border-none rounded-xl outline-none text-sm"
+            />
+          </div>
+          <button type="submit" className="w-full py-3 sm:py-4 bg-emerald-600 text-white font-bold rounded-2xl mt-4 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 text-sm">
+            {editItem ? 'Update Barang' : 'Simpan Barang'}
+          </button>
+        </form>
+      </motion.div>
+    </div>
+  );
+};
+
+const EventsPage = ({ data, onAdd, onEdit, onDelete, role }: { data: MosqueEvent[], onAdd: () => void, onEdit: (item: MosqueEvent) => void, onDelete: (id: number) => void, role: string }) => (
+  <div className="space-y-6">
+    <div className="flex justify-between items-center">
+      <h2 className="text-2xl font-bold">Kegiatan Masjid</h2>
+      {role === 'admin' && (
+        <button onClick={onAdd} className="bg-emerald-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200">
+          <Plus size={20} />
+          <span>Tambah Kegiatan</span>
+        </button>
+      )}
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {data.map((event) => (
+        <div key={event.id} className="card-mosque p-6 flex gap-6">
+          <div className="flex-none w-20 h-20 bg-emerald-50 rounded-2xl flex flex-col items-center justify-center text-emerald-600">
+            <span className="text-xs font-bold uppercase">{format(new Date(event.date), 'MMM')}</span>
+            <span className="text-2xl font-black">{format(new Date(event.date), 'dd')}</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between items-start">
+              <h4 className="font-bold text-lg truncate pr-2">{event.title}</h4>
+              {role === 'admin' && (
+                <div className="flex gap-1">
+                  <button onClick={() => onEdit(event)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={14} /></button>
+                  <button onClick={() => onDelete(event.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg"><Trash2 size={14} /></button>
+                </div>
+              )}
+            </div>
+            <p className="text-slate-500 text-sm mb-3 line-clamp-1">{event.speaker}</p>
+            <div className="flex flex-wrap gap-4 text-xs text-slate-400 font-medium">
+              <div className="flex items-center gap-1.5">
+                <Clock size={14} />
+                <span>{event.time} WIB</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <MapPin size={14} />
+                <span className="truncate">{event.location}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+      {data.length === 0 && (
+        <div className="col-span-full p-12 text-center text-slate-400 italic bg-white rounded-3xl border border-dashed border-slate-200">
+          Belum ada kegiatan yang direncanakan.
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+const EventModal = ({ isOpen, onClose, onSuccess, editItem }: { isOpen: boolean, onClose: () => void, onSuccess: () => void, editItem: MosqueEvent | null }) => {
+  const [formData, setFormData] = useState({
+    title: '',
+    speaker: '',
+    date: format(new Date(), 'yyyy-MM-dd'),
+    time: '18:30',
+    location: 'Ruang Utama',
+    description: ''
+  });
+
+  useEffect(() => {
+    if (editItem) {
+      setFormData({
+        title: editItem.title,
+        speaker: editItem.speaker,
+        date: editItem.date,
+        time: editItem.time,
+        location: editItem.location,
+        description: editItem.description
+      });
+    } else {
+      setFormData({
+        title: '',
+        speaker: '',
+        date: format(new Date(), 'yyyy-MM-dd'),
+        time: '18:30',
+        location: 'Ruang Utama',
+        description: ''
+      });
+    }
+  }, [editItem, isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const url = editItem ? `/api/events/${editItem.id}` : '/api/events';
+    const method = editItem ? 'PUT' : 'POST';
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        onSuccess();
+        onClose();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl my-auto"
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold">{editItem ? 'Edit Kegiatan' : 'Tambah Kegiatan'}</h3>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full"><X size={20} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Judul Kegiatan</label>
+            <input 
+              type="text" 
+              required
+              value={formData.title}
+              onChange={(e) => setFormData({...formData, title: e.target.value})}
+              className="w-full p-2.5 sm:p-3 bg-slate-50 border-none rounded-xl outline-none text-sm"
+              placeholder="Contoh: Kajian Rutin"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Penceramah / Pengisi</label>
+            <input 
+              type="text" 
+              required
+              value={formData.speaker}
+              onChange={(e) => setFormData({...formData, speaker: e.target.value})}
+              className="w-full p-2.5 sm:p-3 bg-slate-50 border-none rounded-xl outline-none text-sm"
+              placeholder="Nama Ustadz..."
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Tanggal</label>
+              <input 
+                type="date" 
+                required
+                value={formData.date}
+                onChange={(e) => setFormData({...formData, date: e.target.value})}
+                className="w-full p-2.5 sm:p-3 bg-slate-50 border-none rounded-xl outline-none text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Waktu</label>
+              <input 
+                type="time" 
+                required
+                value={formData.time}
+                onChange={(e) => setFormData({...formData, time: e.target.value})}
+                className="w-full p-2.5 sm:p-3 bg-slate-50 border-none rounded-xl outline-none text-sm"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Lokasi</label>
+            <input 
+              type="text" 
+              required
+              value={formData.location}
+              onChange={(e) => setFormData({...formData, location: e.target.value})}
+              className="w-full p-2.5 sm:p-3 bg-slate-50 border-none rounded-xl outline-none text-sm"
+              placeholder="Contoh: Ruang Utama"
+            />
+          </div>
+          <button type="submit" className="w-full py-3 sm:py-4 bg-emerald-600 text-white font-bold rounded-2xl mt-4 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 text-sm">
+            {editItem ? 'Update Kegiatan' : 'Simpan Kegiatan'}
+          </button>
+        </form>
+      </motion.div>
+    </div>
+  );
+};
+
+const JamaahPage = ({ data, onAdd, onEdit, onDelete, role }: { data: JamaahRecord[], onAdd: () => void, onEdit: (item: JamaahRecord) => void, onDelete: (id: number) => void, role: string }) => (
+  <div className="space-y-6">
+    <div className="flex justify-between items-center">
+      <h2 className="text-2xl font-bold">Data Jamaah</h2>
+      {role === 'admin' && (
+        <button onClick={onAdd} className="bg-emerald-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200">
+          <Plus size={20} />
+          <span>Tambah Jamaah</span>
+        </button>
+      )}
+    </div>
+
+    <div className="card-mosque overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-100">
+              <th className="p-4 text-xs font-bold text-slate-400 uppercase">Nama</th>
+              <th className="p-4 text-xs font-bold text-slate-400 uppercase">Alamat</th>
+              <th className="p-4 text-xs font-bold text-slate-400 uppercase">Telepon</th>
+              <th className="p-4 text-xs font-bold text-slate-400 uppercase">Status</th>
+              <th className="p-4 text-xs font-bold text-slate-400 uppercase">Tgl Bergabung</th>
+              {role === 'admin' && <th className="p-4 text-xs font-bold text-slate-400 uppercase text-right">Aksi</th>}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {data.map((item) => (
+              <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                <td className="p-4">
+                  <p className="font-bold text-slate-700">{item.name}</p>
+                </td>
+                <td className="p-4 text-sm text-slate-500">{item.address}</td>
+                <td className="p-4 text-sm text-slate-500">{item.phone}</td>
+                <td className="p-4">
+                  <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${
+                    item.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {item.status === 'active' ? 'Aktif' : 'Non-Aktif'}
+                  </span>
+                </td>
+                <td className="p-4 text-sm text-slate-500">{format(new Date(item.join_date), 'dd MMM yyyy')}</td>
+                {role === 'admin' && (
+                  <td className="p-4 text-right">
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => onEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={14} /></button>
+                      <button onClick={() => onDelete(item.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg"><Trash2 size={14} /></button>
+                    </div>
+                  </td>
+                )}
+              </tr>
+            ))}
+            {data.length === 0 && (
+              <tr>
+                <td colSpan={6} className="p-8 text-center text-slate-400 italic text-sm">Belum ada data jamaah.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+);
+
+const JamaahModal = ({ isOpen, onClose, onSuccess, editItem }: { isOpen: boolean, onClose: () => void, onSuccess: () => void, editItem: JamaahRecord | null }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    address: '',
+    phone: '',
+    status: 'active',
+    join_date: format(new Date(), 'yyyy-MM-dd')
+  });
+
+  useEffect(() => {
+    if (editItem) {
+      setFormData({
+        name: editItem.name,
+        address: editItem.address,
+        phone: editItem.phone,
+        status: editItem.status,
+        join_date: editItem.join_date
+      });
+    } else {
+      setFormData({
+        name: '',
+        address: '',
+        phone: '',
+        status: 'active',
+        join_date: format(new Date(), 'yyyy-MM-dd')
+      });
+    }
+  }, [editItem, isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const url = editItem ? `/api/jamaah/${editItem.id}` : '/api/jamaah';
+    const method = editItem ? 'PUT' : 'POST';
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        onSuccess();
+        onClose();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl my-auto"
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold">{editItem ? 'Edit Jamaah' : 'Tambah Jamaah'}</h3>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full"><X size={20} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nama Lengkap</label>
+            <input 
+              type="text" 
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              className="w-full p-2.5 sm:p-3 bg-slate-50 border-none rounded-xl outline-none text-sm"
+              placeholder="Nama Lengkap..."
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Alamat</label>
+            <textarea 
+              required
+              value={formData.address}
+              onChange={(e) => setFormData({...formData, address: e.target.value})}
+              className="w-full p-2.5 sm:p-3 bg-slate-50 border-none rounded-xl outline-none text-sm"
+              placeholder="Alamat Lengkap..."
+              rows={2}
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nomor Telepon</label>
+            <input 
+              type="text" 
+              required
+              value={formData.phone}
+              onChange={(e) => setFormData({...formData, phone: e.target.value})}
+              className="w-full p-2.5 sm:p-3 bg-slate-50 border-none rounded-xl outline-none text-sm"
+              placeholder="0812..."
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Status</label>
+              <select 
+                value={formData.status}
+                onChange={(e) => setFormData({...formData, status: e.target.value as any})}
+                className="w-full p-2.5 sm:p-3 bg-slate-50 border-none rounded-xl outline-none text-sm"
+              >
+                <option value="active">Aktif</option>
+                <option value="inactive">Non-Aktif</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Tgl Bergabung</label>
+              <input 
+                type="date" 
+                required
+                value={formData.join_date}
+                onChange={(e) => setFormData({...formData, join_date: e.target.value})}
+                className="w-full p-2.5 sm:p-3 bg-slate-50 border-none rounded-xl outline-none text-sm"
+              />
+            </div>
+          </div>
+          <button type="submit" className="w-full py-3 sm:py-4 bg-emerald-600 text-white font-bold rounded-2xl mt-4 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 text-sm">
+            {editItem ? 'Update Jamaah' : 'Simpan Jamaah'}
+          </button>
+        </form>
+      </motion.div>
+    </div>
+  );
+};
+
+const InventoryPage = ({ data, onAdd, onEdit, onDelete, role }: { data: InventoryItem[], onAdd: () => void, onEdit: (item: InventoryItem) => void, onDelete: (id: number) => void, role: string }) => (
   <div className="space-y-6">
     <div className="flex justify-between items-center">
       <h2 className="text-2xl font-bold">Inventaris Barang</h2>
       {role === 'admin' && (
-        <button onClick={onAdd} className="bg-emerald-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-emerald-700 transition-colors">
+        <button onClick={onAdd} className="bg-emerald-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200">
           <Plus size={20} />
           <span>Tambah Barang</span>
         </button>
@@ -796,12 +1307,20 @@ const InventoryPage = ({ data, onAdd, role }: { data: InventoryItem[], onAdd: ()
             <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
               <Package size={24} />
             </div>
-            <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${
-              item.condition === 'good' ? 'bg-emerald-100 text-emerald-700' : 
-              item.condition === 'fair' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'
-            }`}>
-              {item.condition === 'good' ? 'Baik' : item.condition === 'fair' ? 'Cukup' : 'Rusak'}
-            </span>
+            <div className="flex gap-2">
+              <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${
+                item.condition === 'good' ? 'bg-emerald-100 text-emerald-700' : 
+                item.condition === 'fair' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'
+              }`}>
+                {item.condition === 'good' ? 'Baik' : item.condition === 'fair' ? 'Cukup' : 'Rusak'}
+              </span>
+              {role === 'admin' && (
+                <div className="flex gap-1">
+                  <button onClick={() => onEdit(item)} className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={14} /></button>
+                  <button onClick={() => onDelete(item.id)} className="p-1 text-rose-600 hover:bg-rose-50 rounded-lg"><Trash2 size={14} /></button>
+                </div>
+              )}
+            </div>
           </div>
           <h4 className="font-bold text-lg">{item.name}</h4>
           <p className="text-slate-500 text-sm mb-4">{item.category}</p>
@@ -961,9 +1480,16 @@ export default function App() {
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [isJamaahModalOpen, setIsJamaahModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<number | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{id: number, type: 'finance' | 'inventory' | 'event' | 'jamaah'} | null>(null);
   const [editItem, setEditItem] = useState<FinanceRecord | null>(null);
+  const [editInventoryItem, setEditInventoryItem] = useState<InventoryItem | null>(null);
+  const [editEventItem, setEditEventItem] = useState<MosqueEvent | null>(null);
+  const [editJamaahItem, setEditJamaahItem] = useState<JamaahRecord | null>(null);
+  const [jamaah, setJamaah] = useState<JamaahRecord[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -973,17 +1499,19 @@ export default function App() {
 
   const fetchData = async () => {
     try {
-      const [statsRes, financeRes, invRes, eventRes, settingsRes] = await Promise.all([
+      const [statsRes, financeRes, invRes, eventRes, jamaahRes, settingsRes] = await Promise.all([
         fetch('/api/stats').then(r => r.json()),
         fetch('/api/finances').then(r => r.json()),
         fetch('/api/inventory').then(r => r.json()),
         fetch('/api/events').then(r => r.json()),
+        fetch('/api/jamaah').then(r => r.json()),
         fetch('/api/settings').then(r => r.json())
       ]);
       setStats(statsRes);
       setFinances(financeRes);
       setInventory(invRes);
       setEvents(eventRes);
+      setJamaah(jamaahRes);
       setSettings(settingsRes);
     } catch (err) {
       console.error("Failed to fetch data", err);
@@ -992,19 +1520,41 @@ export default function App() {
 
   const handleDeleteFinance = async (id: number) => {
     if (user?.role !== 'admin') return;
-    setItemToDelete(id);
+    setItemToDelete({ id, type: 'finance' });
     setIsConfirmOpen(true);
   };
 
-  const confirmDeleteFinance = async () => {
+  const handleDeleteInventory = async (id: number) => {
+    if (user?.role !== 'admin') return;
+    setItemToDelete({ id, type: 'inventory' });
+    setIsConfirmOpen(true);
+  };
+
+  const handleDeleteEvent = async (id: number) => {
+    if (user?.role !== 'admin') return;
+    setItemToDelete({ id, type: 'event' });
+    setIsConfirmOpen(true);
+  };
+
+  const handleDeleteJamaah = async (id: number) => {
+    if (user?.role !== 'admin') return;
+    setItemToDelete({ id, type: 'jamaah' });
+    setIsConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
     if (!itemToDelete) return;
+    const { id, type } = itemToDelete;
+    const endpoint = type === 'finance' ? 'finances' : type === 'inventory' ? 'inventory' : type === 'event' ? 'events' : 'jamaah';
+    
     try {
-      const res = await fetch(`/api/finances/${itemToDelete}`, { method: 'DELETE' });
+      const res = await fetch(`/api/${endpoint}/${id}`, { method: 'DELETE' });
       if (res.ok) fetchData();
     } catch (err) {
       console.error(err);
     } finally {
       setItemToDelete(null);
+      setIsConfirmOpen(false);
     }
   };
 
@@ -1014,10 +1564,46 @@ export default function App() {
     setIsModalOpen(true);
   };
 
+  const handleEditInventory = (item: InventoryItem) => {
+    if (user?.role !== 'admin') return;
+    setEditInventoryItem(item);
+    setIsInventoryModalOpen(true);
+  };
+
+  const handleEditEvent = (item: MosqueEvent) => {
+    if (user?.role !== 'admin') return;
+    setEditEventItem(item);
+    setIsEventModalOpen(true);
+  };
+
+  const handleEditJamaah = (item: JamaahRecord) => {
+    if (user?.role !== 'admin') return;
+    setEditJamaahItem(item);
+    setIsJamaahModalOpen(true);
+  };
+
   const handleAddFinance = () => {
     if (user?.role !== 'admin') return;
     setEditItem(null);
     setIsModalOpen(true);
+  };
+
+  const handleAddInventory = () => {
+    if (user?.role !== 'admin') return;
+    setEditInventoryItem(null);
+    setIsInventoryModalOpen(true);
+  };
+
+  const handleAddEvent = () => {
+    if (user?.role !== 'admin') return;
+    setEditEventItem(null);
+    setIsEventModalOpen(true);
+  };
+
+  const handleAddJamaah = () => {
+    if (user?.role !== 'admin') return;
+    setEditJamaahItem(null);
+    setIsJamaahModalOpen(true);
   };
 
   const handleSaveSettings = async (newSettings: Record<string, string>) => {
@@ -1051,9 +1637,34 @@ export default function App() {
           role={user?.role || 'warga'}
         />
       );
-      case 'inventory': return <InventoryPage data={inventory} onAdd={() => {}} role={user?.role || 'warga'} />;
+      case 'inventory': return (
+        <InventoryPage 
+          data={inventory} 
+          onAdd={handleAddInventory} 
+          onEdit={handleEditInventory}
+          onDelete={handleDeleteInventory}
+          role={user?.role || 'warga'} 
+        />
+      );
       case 'settings': return <SettingsPage settings={settings} onSave={handleSaveSettings} role={user?.role || 'warga'} />;
-      case 'events': return <div className="p-8 text-center text-slate-500">Fitur Kegiatan Segera Hadir</div>;
+      case 'events': return (
+        <EventsPage 
+          data={events} 
+          onAdd={handleAddEvent} 
+          onEdit={handleEditEvent}
+          onDelete={handleDeleteEvent}
+          role={user?.role || 'warga'} 
+        />
+      );
+      case 'jamaah': return (
+        <JamaahPage 
+          data={jamaah} 
+          onAdd={handleAddJamaah} 
+          onEdit={handleEditJamaah}
+          onDelete={handleDeleteJamaah}
+          role={user?.role || 'warga'} 
+        />
+      );
       default: return <Dashboard stats={stats} finances={finances} />;
     }
   };
@@ -1183,6 +1794,7 @@ export default function App() {
           </AnimatePresence>
         </div>
 
+        {/* Modals */}
         <TransactionModal 
           isOpen={isModalOpen} 
           onClose={() => {
@@ -1193,14 +1805,44 @@ export default function App() {
           editItem={editItem}
         />
 
+        <InventoryModal 
+          isOpen={isInventoryModalOpen}
+          onClose={() => {
+            setIsInventoryModalOpen(false);
+            setEditInventoryItem(null);
+          }}
+          onSuccess={fetchData}
+          editItem={editInventoryItem}
+        />
+
+        <EventModal 
+          isOpen={isEventModalOpen}
+          onClose={() => {
+            setIsEventModalOpen(false);
+            setEditEventItem(null);
+          }}
+          onSuccess={fetchData}
+          editItem={editEventItem}
+        />
+
+        <JamaahModal 
+          isOpen={isJamaahModalOpen}
+          onClose={() => {
+            setIsJamaahModalOpen(false);
+            setEditJamaahItem(null);
+          }}
+          onSuccess={fetchData}
+          editItem={editJamaahItem}
+        />
+
         <ConfirmationModal 
           isOpen={isConfirmOpen}
           onClose={() => {
             setIsConfirmOpen(false);
             setItemToDelete(null);
           }}
-          onConfirm={confirmDeleteFinance}
-          title="Hapus Transaksi?"
+          onConfirm={confirmDelete}
+          title="Konfirmasi Hapus"
           message="Data yang dihapus tidak dapat dikembalikan. Apakah Anda yakin?"
         />
       </main>

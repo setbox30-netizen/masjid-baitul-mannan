@@ -37,6 +37,15 @@ db.exec(`
     description TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS jamaah (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    address TEXT,
+    phone TEXT,
+    status TEXT CHECK(status IN ('active', 'inactive')),
+    join_date TEXT
+  );
+
   CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT
@@ -77,6 +86,11 @@ db.exec(`
   INSERT OR IGNORE INTO events (title, speaker, date, time, location, description) VALUES 
   ('Kajian Fiqih Ibadah', 'Ustadz Adi Hidayat', '2026-03-01', '18:30', 'Ruang Utama', 'Pembahasan mendalam tentang tata cara shalat sesuai sunnah.'),
   ('Tabligh Akbar Ramadhan', 'Habib Luthfi', '2026-03-15', '20:00', 'Halaman Masjid', 'Menyambut bulan suci Ramadhan dengan hati yang bersih.');
+
+  INSERT OR IGNORE INTO jamaah (name, address, phone, status, join_date) VALUES 
+  ('Budi Santoso', 'Jl. Merdeka No. 10', '08123456789', 'active', '2024-01-15'),
+  ('Siti Aminah', 'Jl. Mawar No. 5', '08567891234', 'active', '2024-02-20'),
+  ('Agus Setiawan', 'Jl. Melati No. 12', '08198765432', 'active', '2024-03-10');
 `);
 
 async function startServer() {
@@ -90,14 +104,16 @@ async function startServer() {
     const totalIncome = db.prepare("SELECT SUM(amount) as total FROM finances WHERE type = 'income'").get().total || 0;
     const totalExpense = db.prepare("SELECT SUM(amount) as total FROM finances WHERE type = 'expense'").get().total || 0;
     const inventoryCount = db.prepare("SELECT COUNT(*) as count FROM inventory").get().count;
-    const upcomingEvents = db.prepare("SELECT COUNT(*) as count FROM events WHERE date >= date('now')").get().count;
+    const eventCount = db.prepare("SELECT COUNT(*) as count FROM events").get().count;
+    const jamaahCount = db.prepare("SELECT COUNT(*) as count FROM jamaah").get().count;
     
     res.json({
       balance: totalIncome - totalExpense,
       totalIncome,
       totalExpense,
       inventoryCount,
-      upcomingEvents
+      eventCount,
+      jamaahCount
     });
   });
 
@@ -139,6 +155,20 @@ async function startServer() {
     res.json({ id: info.lastInsertRowid });
   });
 
+  app.put("/api/inventory/:id", (req, res) => {
+    const { id } = req.params;
+    const { name, category, quantity, condition, purchase_date } = req.body;
+    db.prepare("UPDATE inventory SET name = ?, category = ?, quantity = ?, condition = ?, purchase_date = ?, last_checked = date('now') WHERE id = ?")
+      .run(name, category, quantity, condition, purchase_date, id);
+    res.json({ status: "ok" });
+  });
+
+  app.delete("/api/inventory/:id", (req, res) => {
+    const { id } = req.params;
+    db.prepare("DELETE FROM inventory WHERE id = ?").run(id);
+    res.json({ status: "ok" });
+  });
+
   // Events Routes
   app.get("/api/events", (req, res) => {
     const rows = db.prepare("SELECT * FROM events ORDER BY date ASC").all();
@@ -149,6 +179,46 @@ async function startServer() {
     const { title, speaker, date, time, location, description } = req.body;
     const info = db.prepare("INSERT INTO events (title, speaker, date, time, location, description) VALUES (?, ?, ?, ?, ?, ?)").run(title, speaker, date, time, location, description);
     res.json({ id: info.lastInsertRowid });
+  });
+
+  app.put("/api/events/:id", (req, res) => {
+    const { id } = req.params;
+    const { title, speaker, date, time, location, description } = req.body;
+    db.prepare("UPDATE events SET title = ?, speaker = ?, date = ?, time = ?, location = ?, description = ? WHERE id = ?")
+      .run(title, speaker, date, time, location, description, id);
+    res.json({ status: "ok" });
+  });
+
+  app.delete("/api/events/:id", (req, res) => {
+    const { id } = req.params;
+    db.prepare("DELETE FROM events WHERE id = ?").run(id);
+    res.json({ status: "ok" });
+  });
+
+  // Jamaah Routes
+  app.get("/api/jamaah", (req, res) => {
+    const rows = db.prepare("SELECT * FROM jamaah ORDER BY name ASC").all();
+    res.json(rows);
+  });
+
+  app.post("/api/jamaah", (req, res) => {
+    const { name, address, phone, status, join_date } = req.body;
+    const info = db.prepare("INSERT INTO jamaah (name, address, phone, status, join_date) VALUES (?, ?, ?, ?, ?)").run(name, address, phone, status, join_date);
+    res.json({ id: info.lastInsertRowid });
+  });
+
+  app.put("/api/jamaah/:id", (req, res) => {
+    const { id } = req.params;
+    const { name, address, phone, status, join_date } = req.body;
+    db.prepare("UPDATE jamaah SET name = ?, address = ?, phone = ?, status = ?, join_date = ? WHERE id = ?")
+      .run(name, address, phone, status, join_date, id);
+    res.json({ status: "ok" });
+  });
+
+  app.delete("/api/jamaah/:id", (req, res) => {
+    const { id } = req.params;
+    db.prepare("DELETE FROM jamaah WHERE id = ?").run(id);
+    res.json({ status: "ok" });
   });
 
   // Settings Routes

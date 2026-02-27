@@ -28,12 +28,22 @@ export interface MosqueEvent {
   description: string;
 }
 
+export interface JamaahRecord {
+  id: number;
+  name: string;
+  address: string;
+  phone: string;
+  status: 'active' | 'inactive';
+  join_date: string;
+}
+
 export interface DashboardStats {
   balance: number;
   totalIncome: number;
   totalExpense: number;
   inventoryCount: number;
-  upcomingEvents: number;
+  eventCount: number;
+  jamaahCount: number;
 }
 
 export interface User {
